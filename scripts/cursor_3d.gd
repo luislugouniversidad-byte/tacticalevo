@@ -1,9 +1,12 @@
 extends Node3D
 
+signal confirmed
+signal cancelled
+
 var gq: int = 0
 var gr: int = 0
 
-var grid_ref: Node3D
+@export var grid_ref: Node3D
 var hex_size: float
 
 var hex_mesh: MeshInstance3D
@@ -12,7 +15,8 @@ var mat_idle: StandardMaterial3D
 var mat_selected: StandardMaterial3D
 
 func _ready():
-	grid_ref = get_parent().get_node("HexGrid3D")
+	if not grid_ref:
+		grid_ref = get_parent().get_node("HexGrid3D")
 	hex_size = grid_ref.tile_size
 
 	mat_idle = StandardMaterial3D.new()
@@ -64,6 +68,12 @@ func _input(event):
 			nr -= 1
 		KEY_DOWN:
 			nr += 1
+		KEY_Z:
+			confirmed.emit()
+			return
+		KEY_X:
+			cancelled.emit()
+			return
 	if _is_in_bounds(nq, nr):
 		gq = nq
 		gr = nr
