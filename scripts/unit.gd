@@ -15,16 +15,7 @@ var stats_final: Dictionary = {}
 var hp_max: int = 100
 var hp_current: int = 100
 
-var ring: MeshInstance3D
-var ring_mat: StandardMaterial3D
-var ring_color_idle = Color(1, 1, 0.6, 0.7)
-var ring_color_acted = Color(0.4, 0.4, 0.4, 0.5)
-var hp_bar_bg: MeshInstance3D
-var hp_bar_fg: MeshInstance3D
-var team_colors = [
-	Color(0.15, 0.4, 0.9),   # 0 = Azul
-	Color(0.9, 0.15, 0.15),  # 1 = Rojo
-]
+var visual: Node3D
 
 func setup(pid: int, pos: Vector2i, race: String = "Humano", cls: String = "Guerrero", pstat: int = Enums.Stat.FUE, lvl: int = 1, ofc: String = "", pteam: int = 0):
 	player = pid
@@ -43,7 +34,13 @@ func setup(pid: int, pos: Vector2i, race: String = "Humano", cls: String = "Guer
 
 	add_to_group("units")
 	_build_collision()
-	_build_visual()
+
+	var vis_script = preload("res://scripts/unit_visual.gd")
+	visual = vis_script.new()
+	visual.name = "UnitVisual"
+	add_child(visual)
+	visual.build(self, team, hp_max)
+	update_hp_bar()
 
 func _build_collision():
 	var shape = CollisionShape3D.new()
@@ -52,115 +49,6 @@ func _build_collision():
 	cyl.height = 0.5
 	shape.shape = cyl
 	add_child(shape)
-
-func _build_visual():
-	var shade = team_colors[team]
-
-	var base = MeshInstance3D.new()
-	var bm = CylinderMesh.new()
-	bm.top_radius = 0.35
-	bm.bottom_radius = 0.35
-	bm.height = 0.08
-	bm.radial_segments = 12
-	base.mesh = bm
-	var bmat = StandardMaterial3D.new()
-	bmat.albedo_color = shade
-	base.material_override = bmat
-	base.position = Vector3(0, 0.04, 0)
-	add_child(base)
-
-	var torso = MeshInstance3D.new()
-	var cm = CylinderMesh.new()
-	cm.top_radius = 0.12
-	cm.bottom_radius = 0.25
-	cm.height = 0.35
-	cm.radial_segments = 10
-	torso.mesh = cm
-	var cmat = StandardMaterial3D.new()
-	cmat.albedo_color = shade.lightened(0.15)
-	torso.material_override = cmat
-	torso.position = Vector3(0, 0.22, 0)
-	add_child(torso)
-
-	var head = MeshInstance3D.new()
-	var sm = SphereMesh.new()
-	sm.radius = 0.1
-	sm.height = 0.2
-	head.mesh = sm
-	var smat = StandardMaterial3D.new()
-	smat.albedo_color = shade.lightened(0.3)
-	head.material_override = smat
-	head.position = Vector3(0, 0.4, 0)
-	add_child(head)
-
-	ring = MeshInstance3D.new()
-	var torus = TorusMesh.new()
-	torus.inner_radius = 0.38
-	torus.outer_radius = 0.42
-	torus.rings = 8
-	ring_mat = StandardMaterial3D.new()
-	ring_mat.albedo_color = ring_color_idle
-	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	ring.material_override = ring_mat
-	ring.position = Vector3(0, 0.01, 0)
-	ring.visible = false
-	add_child(ring)
-
-	_build_hp_bar()
-
-func _build_hp_bar():
-	var bar_width = 0.5
-	var bar_height = 0.04
-	var bar_y = 0.62
-
-	# Background (dark)
-	hp_bar_bg = MeshInstance3D.new()
-	var bgm = BoxMesh.new()
-	bgm.size = Vector3(bar_width, bar_height, 0.06)
-	bgm.material = _make_bar_mat(Color(0.15, 0.15, 0.15))
-	hp_bar_bg.mesh = bgm
-	hp_bar_bg.position = Vector3(0, bar_y, 0)
-	add_child(hp_bar_bg)
-
-	# Foreground (colored)
-	hp_bar_fg = MeshInstance3D.new()
-	var fgm = BoxMesh.new()
-	fgm.size = Vector3(bar_width, bar_height, 0.065)
-	fgm.material = _make_bar_mat(Color(0.2, 0.9, 0.2))
-	hp_bar_fg.mesh = fgm
-	hp_bar_fg.position = Vector3(0, bar_y, 0)
-	add_child(hp_bar_fg)
-
-	update_hp_bar()
-
-func _make_bar_mat(color: Color) -> StandardMaterial3D:
-	var m = StandardMaterial3D.new()
-	m.albedo_color = color
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	return m
-
-func update_hp_bar():
-	if not hp_bar_fg:
-		return
-	var pct = float(hp_current) / float(max(hp_max, 1))
-	pct = clamp(pct, 0.0, 1.0)
-	var w = 0.5 * pct
-	var bx = (0.5 - w) / 2.0
-	var fgm = hp_bar_fg.mesh as BoxMesh
-	if fgm:
-		fgm.size.x = 0.5 * pct
-	hp_bar_fg.position.x = bx
-
-	var color: Color
-	if pct > 0.6:
-		color = Color(0.2, 0.9, 0.2)
-	elif pct > 0.3:
-		color = Color(0.9, 0.8, 0.2)
-	else:
-		color = Color(0.9, 0.2, 0.2)
-	var mat = hp_bar_fg.material_override as StandardMaterial3D
-	if mat:
-		mat.albedo_color = color
 
 func get_stat(s: int) -> int:
 	return stats_final.get(s, 0)
@@ -180,17 +68,21 @@ func get_info() -> String:
 	return info
 
 func select():
-	if ring:
-		ring.visible = true
+	if visual:
+		visual.select()
 
 func deselect():
-	if ring:
-		ring.visible = false
+	if visual:
+		visual.deselect()
 
 func mark_acted():
-	if ring_mat:
-		ring_mat.albedo_color = ring_color_acted
+	if visual:
+		visual.mark_acted()
 
 func mark_ready():
-	if ring_mat:
-		ring_mat.albedo_color = ring_color_idle
+	if visual:
+		visual.mark_ready()
+
+func update_hp_bar():
+	if visual:
+		visual.update_hp_bar(hp_current, hp_max)

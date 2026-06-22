@@ -283,12 +283,8 @@ func _on_create():
 		return
 
 	base_idx += 1
-	var unit = unit_scene.instantiate()
-	unit.setup(0, pos, race_name, cls_name, piece_val, 1, ofc_name, selected_team)
-	var wpos = grid_ref.axial_to_world(pos.x, pos.y)
-	unit.position = wpos + Vector3(0, 0.3, 0)
-	get_parent().add_child(unit)
-	tile_data.unit = unit
+	var unit = UnitFactory.create_unit(unit_scene, grid_ref, 0, pos,
+		race_name, cls_name, piece_val, 1, ofc_name, selected_team)
 	created_units.append(unit)
 
 	unit_count_label.text = "Unidades creadas: " + str(created_units.size())
@@ -308,12 +304,7 @@ func _add_list_item(text: String, color: Color):
 	list_container.add_child(h)
 
 func _on_clear():
-	for u in created_units:
-		var td = grid_ref.tile_at(u.tile_pos.x, u.tile_pos.y)
-		if td:
-			td.unit = null
-		u.queue_free()
-	created_units.clear()
+	UnitFactory.clear_units(created_units, grid_ref)
 	base_idx = 0
 	unit_count_label.text = "Unidades creadas: 0"
 	for c in list_container.get_children():

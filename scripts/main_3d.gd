@@ -26,7 +26,10 @@ func _ready():
 	var cursor_script = preload("res://scripts/cursor_3d.gd")
 	cursor = cursor_script.new()
 	cursor.name = "Cursor3D"
+	cursor.grid_ref = grid
 	add_child(cursor)
+	cursor.confirmed.connect(_try_select)
+	cursor.cancelled.connect(_on_cursor_cancelled)
 
 	var ui_script = preload("res://scripts/ui/unit_info.gd")
 	unit_info = ui_script.new()
@@ -71,11 +74,6 @@ func _input(event):
 
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
-			KEY_Z:
-				_try_select()
-			KEY_X:
-				_try_deselect()
-				unit_info.hide_ui()
 			KEY_C:
 				unit_info.toggle(selected_unit)
 			KEY_A:
@@ -104,6 +102,10 @@ func _try_select() -> bool:
 		print(selected_unit.get_info())
 		return true
 	return false
+
+func _on_cursor_cancelled():
+	_try_deselect()
+	unit_info.hide_ui()
 
 func _try_deselect():
 	if selected_unit:
