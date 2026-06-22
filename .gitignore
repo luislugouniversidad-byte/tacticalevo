@@ -1,0 +1,18 @@
+# Godot exports
+export/
+exports/
+*.pck
+*.zip
+
+# Imported assets
+.import/
+
+# Godot editor
+.godot/
+*.godot~
+*.tscn~
+
+# OS generated
+.DS_Store
+Thumbs.db
+Desktop.ini

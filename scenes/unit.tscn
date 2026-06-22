@@ -1,0 +1,6 @@
+[gd_scene load_steps=1 format=3 uid="uid://unit"]
+
+[ext_resource type="Script" path="res://scripts/unit.gd" id="1"]
+
+[node name="Unit" type="StaticBody3D"]
+script = ExtResource("1")
