@@ -19,7 +19,8 @@ var turn_indicator: CanvasLayer
 var all_units: Array = []
 var game_started: bool = false
 
-@export var orbit_angle: float = 90.0
+@export var orbit_angle: float = 170.0
+var facing_angle: float = 0.0
 
 var hex_dirs = [Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)]
 var hex_world_dirs: Array[Vector3] = []
@@ -169,6 +170,8 @@ func _end_current_turn():
 
 func _enter_third_person():
 	cursor.input_enabled = false
+	facing_angle = 0.0
+	selected_unit.set_facing(facing_angle)
 	var offset = _get_third_person_offset()
 	cam_third.global_position = selected_unit.global_position + offset
 	cam_third.look_at(selected_unit.global_position + Vector3(0, 0.5, 0))
@@ -181,11 +184,11 @@ func _exit_third_person():
 	cam.current = true
 
 func _get_third_person_offset() -> Vector3:
-	var a = deg_to_rad(orbit_angle)
+	var a = deg_to_rad(orbit_angle + facing_angle)
 	return Vector3(sin(a) * THIRD_PERSON_DIST, THIRD_PERSON_HEIGHT, cos(a) * THIRD_PERSON_DIST)
 
 func _move_wasd(keycode: int):
-	var a = deg_to_rad(orbit_angle)
+	var a = deg_to_rad(orbit_angle + facing_angle)
 	var forward = Vector3(-sin(a), 0, -cos(a)).normalized()
 	match keycode:
 		KEY_W: pass
@@ -209,9 +212,11 @@ func _move_wasd(keycode: int):
 		cursor._update_position()
 
 func _orbit_camera(delta_deg: float):
-	orbit_angle = fmod(orbit_angle + delta_deg, 360.0)
-	if orbit_angle < 0:
-		orbit_angle += 360.0
+	facing_angle = fmod(facing_angle + delta_deg, 360.0)
+	if facing_angle < 0:
+		facing_angle += 360.0
+	if selected_unit:
+		selected_unit.set_facing(facing_angle)
 
 func _cursor_in_bounds(q: int, r: int) -> bool:
 	return cursor._is_in_bounds(q, r)

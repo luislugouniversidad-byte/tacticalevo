@@ -86,3 +86,7 @@ func mark_ready():
 func update_hp_bar():
 	if visual:
 		visual.update_hp_bar(hp_current, hp_max)
+
+func set_facing(angle_deg: float):
+	if visual:
+		visual.set_facing(angle_deg)

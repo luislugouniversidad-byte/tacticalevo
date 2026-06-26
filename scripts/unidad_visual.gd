@@ -10,6 +10,7 @@ var team_colors = [
 	Color(0.15, 0.4, 0.9),
 	Color(0.9, 0.15, 0.15),
 ]
+var model_pivot: Node3D
 
 func build(parent: StaticBody3D, race_name: String, team: int, hp_max: int):
 	_build_model(parent, race_name, team)
@@ -19,8 +20,11 @@ func _build_model(parent: StaticBody3D, race_name: String, team: int):
 	var path = "res://assets/models/" + race_name.to_lower() + ".glb"
 	if ResourceLoader.exists(path):
 		var model = ResourceLoader.load(path).instantiate()
-		model.position.y = 0.3
-		parent.add_child(model)
+		model_pivot = Node3D.new()
+		model_pivot.name = "ModelPivot"
+		model_pivot.position.y = 0.3
+		model_pivot.add_child(model)
+		parent.add_child(model_pivot)
 	else:
 		_build_primitives(parent, team)
 
@@ -142,3 +146,7 @@ func mark_acted():
 func mark_ready():
 	if ring_mat:
 		ring_mat.albedo_color = ring_color_idle
+
+func set_facing(angle_deg: float):
+	if model_pivot:
+		model_pivot.rotation.y = deg_to_rad(angle_deg)
