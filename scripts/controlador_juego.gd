@@ -3,7 +3,7 @@ extends Node3D
 @export var zoom_min: float = 5.0
 @export var zoom_max: float = 50.0
 @export var zoom_step: float = 1.5
-@export var rotation_step: float = 45.0
+@export var rotation_step: float = 60.0
 
 const THIRD_PERSON_DIST: float = 4.25
 const THIRD_PERSON_HEIGHT: float = 6
@@ -117,21 +117,18 @@ func _input(event):
 			KEY_X:
 				if selected_unit:
 					_try_deselect()
-			KEY_Q:
+			KEY_A:
 				if selected_unit:
 					_orbit_camera(rotation_step)
-			KEY_E:
+			KEY_D:
 				if selected_unit:
 					_orbit_camera(-rotation_step)
 				else:
 					_end_current_turn()
-			KEY_W, KEY_S, KEY_A, KEY_D:
+			KEY_W, KEY_S:
 				if selected_unit:
 					_move_wasd(event.keycode)
-				elif unit_info.visible_flag:
-					match event.keycode:
-						KEY_A: unit_info.nav_left()
-						KEY_D: unit_info.nav_right()
+				
 
 func _try_select() -> bool:
 	var key = cursor.tile_key()
@@ -197,7 +194,9 @@ func _enter_third_person():
 	cam.current = false
 	cam_third.current = true
 	target_indicator.visible = true
-	target_indicator.position = selected_unit.global_position
+	var ipos = selected_unit.global_position
+	ipos.y = 0.31
+	target_indicator.position = ipos
 
 func _exit_third_person():
 	cursor.input_enabled = true
@@ -215,8 +214,6 @@ func _move_wasd(keycode: int):
 	match keycode:
 		KEY_W: pass
 		KEY_S: forward = -forward
-		KEY_A: forward = Vector3(-forward.z, 0, forward.x)
-		KEY_D: forward = Vector3(forward.z, 0, -forward.x)
 
 	var best_dot = -INF
 	var best_dir = Vector2i(0, 0)
@@ -248,7 +245,7 @@ func _process(delta):
 		var pos = grid.axial_to_world(cursor.gq, cursor.gr)
 		selected_unit.position = pos + Vector3(0, 0.3, 0)
 		if target_indicator.visible:
-			target_indicator.position = pos + Vector3(0, 0.02, 0)
+			target_indicator.position = pos + Vector3(0, 0.31, 0)
 		if cam_third.current:
 			var offset = _get_third_person_offset()
 			var target = selected_unit.global_position + offset
