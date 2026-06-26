@@ -4,7 +4,8 @@ extends Node3D
 @export var zoom_max: float = 50.0
 @export var zoom_step: float = 1.5
 
-const THIRD_PERSON_OFFSET = Vector3(-3, 2.5, -3)
+const THIRD_PERSON_DIST: float = 4.24
+const THIRD_PERSON_HEIGHT: float = 2.5
 
 var cam: Camera3D
 var cam_third: Camera3D
@@ -18,6 +19,11 @@ var turn_indicator: CanvasLayer
 var all_units: Array = []
 var game_started: bool = false
 
+var orbit_angle: float = 225.0
+
+var hex_dirs = [Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)]
+var hex_world_dirs: Array[Vector3] = []
+
 func _ready():
 	cam = $Camera3D
 	cam.position = Vector3(18, 18, 18)
@@ -30,6 +36,9 @@ func _ready():
 	add_child(cam_third)
 
 	grid = $HexGrid3D
+
+	for d in hex_dirs:
+		hex_world_dirs.append(grid.axial_to_world(d.x, d.y).normalized())
 	unit_scene = preload("res://scenes/unidad.tscn")
 
 	var cursor_script = preload("res://scripts/cursor.gd")
@@ -85,14 +94,24 @@ func _input(event):
 		match event.keycode:
 			KEY_C:
 				unit_info.toggle(selected_unit)
-			KEY_A:
-				if unit_info.visible_flag:
-					unit_info.nav_left()
-			KEY_S:
-				if unit_info.visible_flag:
-					unit_info.nav_right()
+			KEY_X:
+				if selected_unit:
+					_try_deselect()
+			KEY_Q:
+				if selected_unit:
+					_orbit_camera(15.0)
 			KEY_E:
-				_end_current_turn()
+				if selected_unit:
+					_orbit_camera(-15.0)
+				else:
+					_end_current_turn()
+			KEY_W, KEY_S, KEY_A, KEY_D:
+				if selected_unit:
+					_move_wasd(event.keycode)
+				elif unit_info.visible_flag:
+					match event.keycode:
+						KEY_A: unit_info.nav_left()
+						KEY_D: unit_info.nav_right()
 
 func _try_select() -> bool:
 	var key = cursor.tile_key()
@@ -149,20 +168,61 @@ func _end_current_turn():
 		cursor.move_to_axial(next.tile_pos.x, next.tile_pos.y)
 
 func _enter_third_person():
-	cam_third.global_position = selected_unit.global_position + THIRD_PERSON_OFFSET
-	cam_third.look_at(selected_unit.global_position)
+	cursor.input_enabled = false
+	orbit_angle = 225.0
+	var offset = _get_third_person_offset()
+	cam_third.global_position = selected_unit.global_position + offset
+	cam_third.look_at(selected_unit.global_position + Vector3(0, 0.5, 0))
 	cam.current = false
 	cam_third.current = true
 
 func _exit_third_person():
+	cursor.input_enabled = true
 	cam_third.current = false
 	cam.current = true
+
+func _get_third_person_offset() -> Vector3:
+	var a = deg_to_rad(orbit_angle)
+	return Vector3(sin(a) * THIRD_PERSON_DIST, THIRD_PERSON_HEIGHT, cos(a) * THIRD_PERSON_DIST)
+
+func _move_wasd(keycode: int):
+	var a = deg_to_rad(orbit_angle)
+	var forward = Vector3(-sin(a), 0, -cos(a)).normalized()
+	match keycode:
+		KEY_W: pass
+		KEY_S: forward = -forward
+		KEY_A: forward = Vector3(-forward.z, 0, forward.x)
+		KEY_D: forward = Vector3(forward.z, 0, -forward.x)
+
+	var best_dot = -INF
+	var best_dir = Vector2i(0, 0)
+	for i in hex_dirs.size():
+		var dot = forward.dot(hex_world_dirs[i])
+		if dot > best_dot:
+			best_dot = dot
+			best_dir = hex_dirs[i]
+
+	var nq = cursor.gq + best_dir.x
+	var nr = cursor.gr + best_dir.y
+	if _cursor_in_bounds(nq, nr):
+		cursor.gq = nq
+		cursor.gr = nr
+		cursor._update_position()
+
+func _orbit_camera(delta_deg: float):
+	orbit_angle = fmod(orbit_angle + delta_deg, 360.0)
+	if orbit_angle < 0:
+		orbit_angle += 360.0
+
+func _cursor_in_bounds(q: int, r: int) -> bool:
+	return cursor._is_in_bounds(q, r)
 
 func _process(delta):
 	if selected_unit:
 		var pos = grid.axial_to_world(cursor.gq, cursor.gr)
 		selected_unit.position = pos + Vector3(0, 0.3, 0)
 		if cam_third.current:
-			var target = selected_unit.global_position + THIRD_PERSON_OFFSET
+			var offset = _get_third_person_offset()
+			var target = selected_unit.global_position + offset
 			cam_third.global_position = cam_third.global_position.lerp(target, delta * 10.0)
-			cam_third.look_at(selected_unit.global_position)
+			cam_third.look_at(selected_unit.global_position + Vector3(0, 0.5, 0))

@@ -6,6 +6,8 @@ signal cancelled
 var gq: int = 0
 var gr: int = 0
 
+var input_enabled: bool = true
+
 @export var grid_ref: Node3D
 var hex_size: float
 
@@ -55,6 +57,8 @@ func _ready():
 	_update_position()
 
 func _input(event):
+	if not input_enabled:
+		return
 	if not (event is InputEventKey and event.pressed):
 		return
 	var nq = gq
