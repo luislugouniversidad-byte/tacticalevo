@@ -3,9 +3,10 @@ extends Node3D
 @export var zoom_min: float = 5.0
 @export var zoom_max: float = 50.0
 @export var zoom_step: float = 1.5
+@export var rotation_step: float = 45.0
 
-const THIRD_PERSON_DIST: float = 4
-const THIRD_PERSON_HEIGHT: float = 2
+const THIRD_PERSON_DIST: float = 4.25
+const THIRD_PERSON_HEIGHT: float = 6
 
 var cam: Camera3D
 var cam_third: Camera3D
@@ -22,6 +23,8 @@ var game_started: bool = false
 @export var orbit_angle: float = 170.0
 var facing_angle: float = 0.0
 
+var target_indicator: MeshInstance3D
+
 var hex_dirs = [Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)]
 var hex_world_dirs: Array[Vector3] = []
 
@@ -35,6 +38,22 @@ func _ready():
 	cam_third.projection = Camera3D.PROJECTION_PERSPECTIVE
 	cam_third.current = false
 	add_child(cam_third)
+
+	target_indicator = MeshInstance3D.new()
+	target_indicator.name = "TargetIndicator"
+	var hex = CylinderMesh.new()
+	hex.top_radius = 0.42
+	hex.bottom_radius = 0.42
+	hex.height = 0.04
+	hex.radial_segments = 6
+	target_indicator.mesh = hex
+	target_indicator.rotate_y(deg_to_rad(30))
+	var mat = StandardMaterial3D.new()
+	mat.albedo_color = Color(0, 0.9, 0.2, 0.6)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	target_indicator.material_override = mat
+	target_indicator.visible = false
+	add_child(target_indicator)
 
 	grid = $HexGrid3D
 
@@ -100,10 +119,10 @@ func _input(event):
 					_try_deselect()
 			KEY_Q:
 				if selected_unit:
-					_orbit_camera(15.0)
+					_orbit_camera(rotation_step)
 			KEY_E:
 				if selected_unit:
-					_orbit_camera(-15.0)
+					_orbit_camera(-rotation_step)
 				else:
 					_end_current_turn()
 			KEY_W, KEY_S, KEY_A, KEY_D:
@@ -177,11 +196,14 @@ func _enter_third_person():
 	cam_third.look_at(selected_unit.global_position + Vector3(0, 0.5, 0))
 	cam.current = false
 	cam_third.current = true
+	target_indicator.visible = true
+	target_indicator.position = selected_unit.global_position
 
 func _exit_third_person():
 	cursor.input_enabled = true
 	cam_third.current = false
 	cam.current = true
+	target_indicator.visible = false
 
 func _get_third_person_offset() -> Vector3:
 	var a = deg_to_rad(orbit_angle + facing_angle)
@@ -225,6 +247,8 @@ func _process(delta):
 	if selected_unit:
 		var pos = grid.axial_to_world(cursor.gq, cursor.gr)
 		selected_unit.position = pos + Vector3(0, 0.3, 0)
+		if target_indicator.visible:
+			target_indicator.position = pos + Vector3(0, 0.02, 0)
 		if cam_third.current:
 			var offset = _get_third_person_offset()
 			var target = selected_unit.global_position + offset
