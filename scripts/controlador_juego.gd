@@ -4,8 +4,8 @@ extends Node3D
 @export var zoom_max: float = 50.0
 @export var zoom_step: float = 1.5
 
-const THIRD_PERSON_DIST: float = 4.24
-const THIRD_PERSON_HEIGHT: float = 2.5
+const THIRD_PERSON_DIST: float = 4
+const THIRD_PERSON_HEIGHT: float = 2
 
 var cam: Camera3D
 var cam_third: Camera3D
@@ -19,7 +19,7 @@ var turn_indicator: CanvasLayer
 var all_units: Array = []
 var game_started: bool = false
 
-var orbit_angle: float = 225.0
+@export var orbit_angle: float = 90.0
 
 var hex_dirs = [Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)]
 var hex_world_dirs: Array[Vector3] = []
@@ -169,7 +169,6 @@ func _end_current_turn():
 
 func _enter_third_person():
 	cursor.input_enabled = false
-	orbit_angle = 225.0
 	var offset = _get_third_person_offset()
 	cam_third.global_position = selected_unit.global_position + offset
 	cam_third.look_at(selected_unit.global_position + Vector3(0, 0.5, 0))
