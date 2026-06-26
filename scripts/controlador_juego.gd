@@ -23,7 +23,8 @@ var game_started: bool = false
 @export var orbit_angle: float = 170.0
 var facing_angle: float = 0.0
 
-var target_indicator: MeshInstance3D
+var range_indicators: Array[MeshInstance3D] = []
+var indicator_mat: StandardMaterial3D
 
 var hex_dirs = [Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)]
 var hex_world_dirs: Array[Vector3] = []
@@ -39,21 +40,9 @@ func _ready():
 	cam_third.current = false
 	add_child(cam_third)
 
-	target_indicator = MeshInstance3D.new()
-	target_indicator.name = "TargetIndicator"
-	var hex = CylinderMesh.new()
-	hex.top_radius = 0.42
-	hex.bottom_radius = 0.42
-	hex.height = 0.04
-	hex.radial_segments = 6
-	target_indicator.mesh = hex
-	target_indicator.rotate_y(deg_to_rad(30))
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(0, 0.9, 0.2, 0.6)
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	target_indicator.material_override = mat
-	target_indicator.visible = false
-	add_child(target_indicator)
+	indicator_mat = StandardMaterial3D.new()
+	indicator_mat.albedo_color = Color(0, 0.9, 0.2, 0.35)
+	indicator_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 
 	grid = $HexGrid3D
 
@@ -193,16 +182,13 @@ func _enter_third_person():
 	cam_third.look_at(selected_unit.global_position + Vector3(0, 0.5, 0))
 	cam.current = false
 	cam_third.current = true
-	target_indicator.visible = true
-	var ipos = selected_unit.global_position
-	ipos.y = 0.31
-	target_indicator.position = ipos
+	_show_move_range()
 
 func _exit_third_person():
 	cursor.input_enabled = true
 	cam_third.current = false
 	cam.current = true
-	target_indicator.visible = false
+	_hide_move_range()
 
 func _get_third_person_offset() -> Vector3:
 	var a = deg_to_rad(orbit_angle + facing_angle)
@@ -229,6 +215,7 @@ func _move_wasd(keycode: int):
 		cursor.gq = nq
 		cursor.gr = nr
 		cursor._update_position()
+		_show_move_range()
 
 func _orbit_camera(delta_deg: float):
 	facing_angle = fmod(facing_angle + delta_deg, 360.0)
@@ -240,12 +227,47 @@ func _orbit_camera(delta_deg: float):
 func _cursor_in_bounds(q: int, r: int) -> bool:
 	return cursor._is_in_bounds(q, r)
 
+func _make_indicator() -> MeshInstance3D:
+	var m = MeshInstance3D.new()
+	var hex = CylinderMesh.new()
+	hex.top_radius = 0.42
+	hex.bottom_radius = 0.42
+	hex.height = 0.04
+	hex.radial_segments = 6
+	m.mesh = hex
+	m.rotate_y(deg_to_rad(30))
+	m.material_override = indicator_mat
+	m.position.y = 0.31
+	return m
+
+func _show_move_range():
+	_hide_move_range()
+	var q = cursor.gq
+	var r = cursor.gr
+	for d in hex_dirs:
+		var nq = q + d.x
+		var nr = r + d.y
+		if not _cursor_in_bounds(nq, nr):
+			continue
+		var tile = grid.tile_at(nq, nr)
+		if tile and tile.unit:
+			continue
+		var m = _make_indicator()
+		var pos = grid.axial_to_world(nq, nr)
+		m.position.x = pos.x
+		m.position.z = pos.z
+		add_child(m)
+		range_indicators.append(m)
+
+func _hide_move_range():
+	for m in range_indicators:
+		m.queue_free()
+	range_indicators.clear()
+
 func _process(delta):
 	if selected_unit:
 		var pos = grid.axial_to_world(cursor.gq, cursor.gr)
 		selected_unit.position = pos + Vector3(0, 0.3, 0)
-		if target_indicator.visible:
-			target_indicator.position = pos + Vector3(0, 0.31, 0)
 		if cam_third.current:
 			var offset = _get_third_person_offset()
 			var target = selected_unit.global_position + offset
