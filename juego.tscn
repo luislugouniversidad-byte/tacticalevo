@@ -15,7 +15,7 @@ script = ExtResource("1")
 script = ExtResource("2")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1442192534]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.030525804, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.030525804, 0, -0.064676285)
 projection = 1
 current = true
 size = 19.0
